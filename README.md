@@ -1,7 +1,6 @@
 # opendata_survey
 
-- オープンデータ
-- https://code4fukui.github.io/opendata_survey/
+- [地方公共団体へのオープンデータの取組に関するアンケート結果・回答一覧](https://code4fukui.github.io/opendata_survey/)
 
 ## CSV
 
