@@ -1,0 +1,342 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>地方公共団体へのオープンデータの取組に関するアンケート結果・回答一覧</title>
+<script type="module">
+import { CSV } from "https://js.sabae.cc/CSV.js";
+import { extendGraphics } from "https://js.sabae.cc/extendGraphics.js";
+import { hsl2rgb } from "https://js.sabae.cc/hsl2rgb.js";
+import { Num } from "https://js.sabae.cc/Num.js";
+
+let csvdata;
+
+const create = (tag) => document.createElement(tag);
+const clear = (ele) => ele.innerHTML = "";
+
+window.onload = async () => {
+	csvdata = await CSV.fetch("r2_survey_answers_simple.csv");
+	showGraph()
+}
+const showGraph = () => {
+	const offset = 2;
+	for (let i = offset; i < csvdata[0].length; i++) {
+		const d = csvdata[0][i];
+		const btn = create("option");
+		btn.textContent = d;
+		btn.value = i;
+		btns.appendChild(btn);
+	}
+	btns.onchange = () => sel(btns.value);
+	sel(2);
+};
+
+var sel = function(idx) {
+	var d = {};
+	var data = csvdata;
+	var didx = data[0][idx];
+	var n = didx.lastIndexOf("（");
+	var map = null;
+	if (n >= 0) {
+		map = didx.substring(n + 1);
+		didx = didx.substring(0, n);
+	}
+	for (var i = 1; i < data.length; i++) {
+		var item = data[i];
+		var val = item[idx];
+		if (map != null) {
+			var n = map.indexOf(val + ":");
+			if (n >= 0) {
+				var m = map.indexOf(" ", n);
+				if (m < 0)
+					m = map.indexOf("）", n);
+				val = map.substring((val + ":").length + n, m);
+			}
+		}
+		if (!d[val]) {
+			d[val] = 0;
+		}
+		d[val]++;
+	}
+	// name change
+	const d2 = {};
+	for (const name in d) {	
+		if (name.toString() === "0") {
+			d2["No"] = d[name];
+		} else if (name.toString() === "1") {
+			d2["Yes"] = d[name];
+		} else if (name == "") {
+			d2["[無回答]"] = d[name];
+		} else {
+			d2[name] = d[name];
+		}
+	}
+	console.log(d, d2);
+	const gdata = {
+		data: d2,
+		unit: "人"
+	};
+	showCircleGraph(canvas, gdata);
+	clear(tbl);
+	showTable(tbl, gdata);
+};
+
+var showTable = function(div, gdata) {
+	var data = gdata.data;
+	var unit = gdata.unit;
+	var d = [];
+	var sum = 0;
+	for (var n in data) {
+		d.push([ n, data[n] ]);
+		sum += data[n];
+	}
+	d = d.sort(function(a, b) {
+		if (a[1] < b[1])
+			return 1;
+		if (a[1] == b[1])
+			return 0;
+		return -1;
+	});
+	
+	d.push([ "合計", sum ]);
+	var tbl = create("table");
+	for (var i = 0; i < d.length; i++) {
+		var tr = create("tr");
+		var td = create("td");
+		var s = d[i][0];
+		if (s.startsWith("http://") || s.startsWith("https://")) {
+			td.innerHTML = "<a href=" + s + " target=_blank>" + s + "</a>";
+		} else {
+			td.textContent = s;
+		}
+		tr.appendChild(td);
+		td = create("td");
+		td.textContent = Num.addComma(d[i][1]) + unit;
+		tr.appendChild(td);
+		td = create("td");
+		td.textContent = (d[i][1] / sum * 100).toFixed(1) + "%";
+		tr.appendChild(td);
+		tbl.appendChild(tr);
+	}
+	div.appendChild(tbl);
+};
+var showCircleGraph = function(c, gdata) {
+	var data = gdata.data;
+	var unit = gdata.unit;
+	var g = c.getContext("2d");
+	extendGraphics(g);
+	g.canvas1 = c;
+	g.init = function() {
+		var ua = navigator.userAgent;
+		//this.ratio = 1;
+		//if (ua.indexOf("iPhone") >= 0 || ua.indexOf("iPad") >= 0 || ua.indexOf("iPod") >= 0)
+			this.ratio = window.devicePixelRatio;
+		this.cw = this.canvas1.clientWidth * this.ratio;
+		this.ch = this.canvas1.clientHeight * this.ratio;
+		this.canvas1.width = this.cw;
+		this.canvas1.height = this.ch;
+		this.canvas1.ratio = this.ratio;
+		if (this.draw != null)
+			this.draw();
+	};
+	g.init();
+	var d = [];
+	var sum = 0;
+	for (var n in data) {
+		d.push([ n, data[n] ]);
+		sum += data[n];
+	}
+//	alert(sum);
+	
+	d = d.sort(function(a, b) {
+		if (a[0] == "その他")
+			return 1;
+		if (b[0] == "その他")
+			return -1;
+		if (a[1] < b[1])
+			return 1;
+		if (a[1] == b[1])
+			return 0;
+		return -1;
+	});
+//	dump(d);
+	g.setFont = function(sh) {
+		this.font = "normal " + sh + "px sans-serif";
+	};
+	g.fillTextCenter = function(s, x, y) {
+		var met = this.measureText(s);
+		var sw = met.width;
+		this.fillText(s, x - sw / 2, y);
+	};
+	var timer = null;
+	
+	var animation = function(t, type) {
+		switch (type) {
+			case 0:
+				return t * t;
+			case 1:
+				return 1 - (1 - t) * (1 - t);
+			default:
+				return t;
+		}
+		return t;
+	};
+	
+	var t = 0;
+	g.draw = function() {
+		g.setColor(255, 255, 255);
+		g.fillRect(0, 0, g.cw, g.ch);
+		
+		var cx = g.cw / 2;
+		var cy = g.ch / 2;
+		var r = Math.min(g.cw, g.ch) / 2 * .95;
+		
+		var max = Math.PI * 2 * animation(t / 100, 1);
+		var f = function(dx, dy, s, v) {
+			g.translate(dx, dy);
+			var th = -Math.PI / 2;
+			for (var i = 0; i < d.length; i++) {
+				var dth = d[i][1] / sum * max;
+				var col = hsl2rgb(90 + 320 / d.length * i, s, v);
+				g.beginPath();
+				g.setColor(col[0], col[1], col[2]);
+				g.moveTo(cx, cy);
+				g.arc(cx, cy, r, th, th + dth, false);
+				g.lineTo(cx, cy);
+				g.closePath();
+				g.fill();
+				th += dth;
+			}
+			g.translate(-dx, -dy);
+		};
+		f(8, 8, .4, .8);
+		//f(0, 0, .4, 1);
+
+		const fh = g.ch / 30;
+		g.setFont(fh);
+//		g.setColor(255, 255, 255);
+		g.setColor(0, 0, 0);
+		var th = -Math.PI / 2;
+		for (var i = 0; i < d.length; i++) {
+			var dth = d[i][1] / sum * max;
+			var x = cx + Math.cos(th + dth / 2) * r * .7;
+			var y = cy + Math.sin(th + dth / 2) * r * .7;
+			g.fillTextCenter(d[i][0], x, y - fh / 6);
+			g.fillTextCenter(Num.addComma(d[i][1]) + unit, x, y + fh + fh / 6);
+			g.fillTextCenter((d[i][1] / sum * 100).toFixed(1) + "%", x, y + fh * 2 + fh / 6);
+			th += dth;
+		}
+		g.fillTextCenter("総数", cx, cy - fh / 6);
+		g.fillTextCenter(Num.addComma(sum) + unit, cx, cy + fh + fh / 6);
+		if (t >= 100) {
+			clearInterval(timer);
+		}
+	};
+	g.init();
+	if (timer) {
+		clearInterval(timer);
+	}
+	timer = setInterval(function() {
+		g.draw();
+		t++;
+	}, 10);
+};
+var toTable = function(array) {
+	var tbl = create("table");
+	for (var i = 0; i < array.length; i++) {
+		var dd = array[i];
+		var tr = create("tr");
+		for (var j = 0; j < dd.length; j++) {
+			var td = create("td");
+			td.textContent = dd[j];
+			tr.appendChild(td);
+		}
+		tbl.appendChild(tr);
+	}
+	return tbl;
+};
+
+</script>
+<style>
+body {
+	margin: 8px;
+	box-sizing: border-box; /* width include border */
+	-webkit-text-size-adjust: none; /* for iPhone */
+	text-align: center;
+}
+h1 {
+	font-size: 130%;
+	margin: 1em 0;
+}
+table {
+	border-collapse: collapse;
+}
+td {
+	font-size: 70%;
+	border: 1px solid #444;
+	padding: 2px;
+	white-space: nowrap;
+}
+select {
+	width: 80%;
+}
+#credit a {
+	color: gray !important;
+	text-decoration: none;
+}
+#credit {
+	margin-top: 1em;
+	font-size: 80%;
+}
+#head {
+	font-size: 80%;
+	margin-bottom: .5em;
+}
+#head a {
+	color: gray !important;
+	text-decoration: none;
+}
+#canvas {
+	display: inline-block;
+	width: 400px;
+	height: 400px;
+}
+#title {
+	margin-top: 1em;
+}
+#tbl {
+	margin-top: 1em;
+}
+button {
+	margin: 3px;
+	background-color: white;
+}
+#tbl table {
+	display: inline-block;
+	text-align: right;
+}
+#tbl table td:first-child {
+	text-align: left;
+}
+@media screen and (min-width: 440px) {
+}
+#qbox {
+	margin: 0.5em;
+}
+#credit {
+	margin-top: 1em;
+}
+</style>
+</head>
+<body>
+
+<h1>地方公共団体へのオープンデータの取組に関するアンケート結果・回答一覧</h1>
+
+<select id=btns></select>
+<canvas id="canvas"></canvas>
+<div id="tbl"></div>
+	
+<div id='credit'>
+DATA: <a href="https://cio.go.jp/policy-opendata">地方公共団体へのオープンデータの取組に関するアンケート結果・回答一覧 - オープンデータ | 政府CIOポータル</a> → <a href=r2_survey_answers_simple.csv>CSV</a>(<a href=r2_survey_questions.md>質問.md</a> / <a href=r2_survey_questions.csv>質問.csv</a>)<br>
+APP: <a href="https://fukuno.jig.jp/3260">CC BY 福野泰介／一日一創</a> (base App 「<a href=https://fukuno.jig.jp/app/csv/qgraph-localict2018.html>福井県こどもプログラミング協議会 2018年度 地域ICTクラブ アンケート結果</a>」)
+</div>
+
+</body>
+</html>
