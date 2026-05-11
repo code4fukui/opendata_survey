@@ -1,18 +1,14 @@
-# opendata_survey
+# Open Data Survey for Japanese Local Governments (opendata_survey)
 
-- [地方公共団体へのオープンデータの取組に関するアンケート結果・回答一覧](https://code4fukui.github.io/opendata_survey/)
-- [地方公共団体ごとの回答、全件一覧 Markdown](https://github.com/code4fukui/opendata_survey/blob/main/md/README.md)
+> 日本語のREADMEはこちらです: [README.ja.md](README.ja.md)
 
-## CSV
+This repository contains the results of a survey on open data initiatives conducted among local governments in Japan. The data, originally published by the Government CIO Portal, has been processed into accessible CSV and Markdown formats for analysis and browsing.
 
-- [回答結果CSV](https://code4fukui.github.io/opendata_survey/r2_survey_answers_simple.csv)
-- [質問CSV](https://code4fukui.github.io/opendata_survey/r2_survey_questions.csv)
-- [質問Markdown](r2_survey_questions.md)
+An interactive web application is also provided to visualize the aggregated survey results.
 
-## tool
+## Explore the Data
 
-[r2_survey_answers.csv](r2_survey_answers.csv)から、CSVやMarkdownを生成する
+- **📊 [Interactive Survey Results Dashboard](https://code4fukui.github.io/opendata_survey/)**
+  - View aggregated survey data with dynamic charts and tables.
 
-```js
-deno run -A make.js
-```
+- **📄 [Browse Responses by Municipality](https://github.com/code4fukui/opendata_survey
